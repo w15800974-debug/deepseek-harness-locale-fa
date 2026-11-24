@@ -1,0 +1,58 @@
+{
+  "name": "deepseek-harness-locale-fa",
+  "version": "1.0.0",
+  "description": "Persian (فارسی) localization & smart RTL/BiDi layout plugin for DeepSeek Harness Web & Desktop UI",
+  "type": "module",
+  "license": "MIT",
+  "author": "Ali Hajjian (w15800974-debug)",
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "i18n",
+    "l10n",
+    "locale",
+    "persian",
+    "farsi",
+    "fa",
+    "rtl",
+    "bidi"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/w15800974-debug/deepseek-harness-locale-fa.git"
+  },
+  "homepage": "https://github.com/w15800974-debug/deepseek-harness-locale-fa#readme",
+  "bugs": {
+    "url": "https://github.com/w15800974-debug/deepseek-harness-locale-fa/issues"
+  },
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./lib/client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml"
+  },
+  "files": [
+    "index.js",
+    "cordis.patch.yml",
+    "lib/client.js",
+    "locale/",
+    "dict/",
+    "src/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check": "node scripts/check.mjs",
+    "test": "node scripts/test.mjs"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web"
+    }
+  }
+}

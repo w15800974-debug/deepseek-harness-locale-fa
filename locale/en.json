@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Persian (فارسی) Language Pack & Smart RTL",
+    "description": "Adds Persian (فارسی) to Settings → General → Language with full UI localization, RTL layout for interface and chat messages, and strict LTR preservation for code blocks, terminal output, commands, file paths, and English blocks."
+  }
+}
