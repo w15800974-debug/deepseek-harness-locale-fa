@@ -1,33 +1,28 @@
 <div dir="rtl">
 
-# فارسی‌ساز و راست‌چین هوشمند DeepSeek Harness (`deepseek-harness-locale-fa`)
+# فارسی‌ساز و راست‌چین هوشمند DeepSeek Harness (`deepseek-harness-locale-fa`) — نسخه ۲.۰
 
-پلاگین رسمی‌سازگار فارسی‌سازی رابط کاربری وب و دسکتاپ **[DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)** (`dsh`) همراه با راست‌چین‌سازی هوشمند (RTL) و حفظ خودکار چپ‌چین (LTR) برای کدها، ترمینال، دستورات و متون انگلیسی.
+پلاگین رسمی‌سازگار فارسی‌سازی رابط کاربری وب و دسکتاپ **[DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)** (`dsh`) همراه با راست‌چین‌سازی جراحی‌شده و بدون شکستگی (RTL) و حفظ دقیق چپ‌چین (LTR) برای کدها، ترمینال، دستورات، فرمول‌های ریاضی و متون انگلیسی.
 
-بدون نیاز به فورک کردن یا تغییر فایل‌های هسته DeepSeek Harness — نصب تنها با یک دستور و کاملاً برگشت‌پذیر.
+بدون نیاز به فورک کردن یا تغییر فایل‌های هسته DeepSeek Harness — نصب سریع و کاملاً برگشت‌پذیر.
 
 ---
 
-## ویژگی‌ها
+## تغییرات مهم نسخه ۲.۰
 
-- **افزودن «فارسی» به لیست زبان‌های رسمی برنامه**: زبان `فارسی` را از طریق API رسمی `@deepseek-ai/dsh-client-locale` (`ctx.locale.addLanguage` و `ctx.locale.register`) به مسیر **Settings ← General ← Language** اضافه می‌کند و انتخاب کاربر را ذخیره نگه می‌دارد.
-- **فارسی‌سازی کامل رابط کاربری**: پوشش بیش از ۴۰ فضای نام (Namespace) رسمی DeepSeek Harness همراه با لایه تکمیلی هوشمند برای ترجمه بخش‌های جدید رابط کاربری در نسخه‌های در حال توسعه (بدون دستکاری در متن پیام‌های گفتگو یا خروجی کدها).
-- **راست‌چین‌سازی کامل محیط و بخش پیام‌ها (RTL)**: به محض انتخاب زبان فارسی، کل رابط کاربری (نوار کناری، تنظیمات، منوها، پنجره‌ها و بخش پیام‌ها) راست‌چین می‌شود و تایپوگرافی خوانای فارسی (`Vazirmatn` با فالبک خودکار به فونت‌های فارسی سیستم) اعمال می‌گردد.
-- **حفظ دقیق چپ‌چین (LTR) برای بخش‌های انگلیسی و فنی**:
-  - بلوک‌های کد (`pre`, `code`, Syntax Highlighters) و کدهای درون‌خطی (`inline code`)
-  - ترمینال، خروجی دستورات شل و بش (`.xterm`, `stdout`, `stderr`, Command Execution)
-  - نمایش تفاوت فایل‌ها (`Diff`)، مسیر فایل‌ها، نشانی‌های اینترنتی (`URL`)، میانبرهای صفحه‌کلید (`kbd`) و فیلدهای فنی (کلید API، Base URL، شناسه مدل)
-  - **تشخیص خودکار جهت هر پاراگراف در پیام‌ها (Smart BiDi)**: پاراگراف‌ها و پیام‌های فارسی راست‌چین و پاراگراف‌های تماماً انگلیسی چپ‌چین نمایش داده می‌شوند.
-- **بازگشت تمیز و آنی به زبان‌های دیگر**: با تغییر زبان به انگلیسی یا چینی، تمام استایل‌های RTL و تغییرات DOM به‌طور کامل و بدون نیاز به بارگذاری مجدد صفحه به حالت اول برمی‌گردند.
-- **آماده نصب بدون نیاز به بیلد**: فایل `lib/client.js` از پیش ساخته و در مخزن قرار داده شده است.
+- **کلیدهای واقعی و رسمی DeepSeek Harness:** استفاده از کلیدهای واقعی نقطه‌دار (`sidebar`, `settings.locale`, `settings.theme`, `settings.sessionLog`, `chat`, `conversation`, `workspace`, `approval`, `plan`, `goal`, `skill`, `schedule`, `reference`, `fileActions`, `sessionPanel` و غیره).
+- **پل ترجمه زمان اجرا (`ctx.locale.bind` Bridge):** هر کلید جدید یا تغییریافته‌ای که از طریق `t()` به انگلیسی برگردد، پیش از رندر شدن در React به‌صورت آنی و بدون پرش (Zero-Flicker) به فارسی ترجمه می‌شود (همراه با بیش از ۴۵۰ عبارت دقیق و ۳۷ الگوی پویا برای زمان‌ها، شمارنده‌ها و وضعیت‌ها).
+- **موتور RTL مهندسی‌شده و بدون به‌هم‌ریختگی:**
+  - حذف کامل تغییر سراسری `line-height` و دستکاری `transform` روی آیکون‌ها برای حفظ چیدمان دقیق دکمه‌ها، منوها و نوارهای ابزار.
+  - محافظت از دکمه‌های پنجره دسکتاپ (`data-window-drag-controls`).
+  - تشخیص هوشمند جهت هر بلوک در پیام‌ها (پاراگراف فارسی راست‌چین، پاراگراف تماماً انگلیسی چپ‌چین، و کادر تایپ با `dir="auto"`).
+  - حفظ قطعی چپ‌چین (LTR) برای کدها، کدهای درون‌خطی، ترمینال (`.xterm`)، فرمول‌های `KaTeX`، خروجی دستورات، Diff، مسیر فایل‌ها، URLها و فیلدهای کلید API.
 
 ---
 
 ## نصب (Installation)
 
-### روش ۱: نصب از طریق خط فرمان (CLI)
-
-**برای نسخه وب (`dsh web`):**
+### روش ۱: نصب از طریق خط فرمان (نسخه وب)
 
 </div>
 
@@ -37,22 +32,10 @@ dsh plugin --profile web add github:w15800974-debug/deepseek-harness-locale-fa
 
 <div dir="rtl">
 
-**برای نسخه دسکتاپ (DeepSeek Harness Desktop):**
-ابتدا یک‌بار برنامه دسکتاپ را اجرا کرده و سپس کاملاً ببندید، بعد دستور زیر را اجرا کنید:
+### روش ۲: نصب از طریق محیط گرافیکی (وب و دسکتاپ)
 
-</div>
-
-```bash
-dsh plugin --profile desktop add github:w15800974-debug/deepseek-harness-locale-fa
-```
-
-<div dir="rtl">
-
-### روش ۲: نصب از طریق محیط گرافیکی برنامه
-
-1. در نوار کناری DeepSeek Harness وارد بخش **Plugins** شوید.
-2. روی **Add plugin** کلیک کنید.
-3. آدرس زیر را وارد کرده و روی **Install** کلیک کنید:
+1. در نوار کناری DeepSeek Harness وارد **Plugins** شوید و روی **Add plugin** کلیک کنید.
+2. نشانی زیر را وارد کرده و **Install** را بزنید:
 
 </div>
 
@@ -62,19 +45,40 @@ github:w15800974-debug/deepseek-harness-locale-fa
 
 <div dir="rtl">
 
-4. پس از نصب، گزینه **Enable now** را بزنید و `dsh web` (یا برنامه دسکتاپ) را یک‌بار مجدداً راه‌اندازی کنید.
+3. پس از نصب، گزینه **Enable now** را بزنید و برنامه را یک‌بار مجدداً راه‌اندازی کنید.
+4. وارد **Settings ← General ← Language** شوید و **فارسی** را انتخاب کنید.
 
 ---
 
-## فعال‌سازی زبان فارسی
+## نحوه آپدیت به نسخه‌های جدید (Updating)
 
-1. وارد **Settings ← General** شوید.
-2. در ردیف **Language** گزینه **فارسی** را انتخاب کنید.
-3. محیط کاربری، نوار کناری، تنظیمات و بخش پیام‌ها بلافاصله فارسی و راست‌چین می‌شوند، در حالی که کدها، ترمینال و دستورات چپ‌چین باقی می‌مانند.
+در DeepSeek Harness برای آپدیت کردن پلاگین‌هایی که از گیت‌هاب نصب شده‌اند، باید نسخه قبلی حذف و نسخه جدید از گیت‌هاب دوباره نصب شود:
+
+### آپدیت در نسخه وب (خط فرمان CLI)
+
+ابتدا `dsh web` را متوقف کنید و دستورات زیر را اجرا نمایید:
+
+</div>
+
+```bash
+dsh plugin --profile web remove deepseek-harness-locale-fa
+dsh plugin --profile web add github:w15800974-debug/deepseek-harness-locale-fa
+```
+
+<div dir="rtl">
+
+سپس `dsh web` را دوباره اجرا کرده و صفحه مرورگر را رفرش کنید (`Ctrl+Shift+R` یا `Cmd+Shift+R`).
+
+### آپدیت در نسخه دسکتاپ یا محیط گرافیکی (GUI)
+
+1. در نوار کناری وارد **Plugins** شوید.
+2. پلاگین `deepseek-harness-locale-fa` را پیدا کرده و روی **Uninstall / Remove** کلیک کنید.
+3. *(نکته مهم در ویندوز دسکتاپ)* برنامه DeepSeek Harness را **کاملاً ببندید** و دوباره باز کنید تا قفل فایل‌های نسخه قبلی آزاد شود.
+4. دوباره روی **Add plugin** کلیک کنید، `github:w15800974-debug/deepseek-harness-locale-fa` را وارد کرده، **Install** و سپس **Enable now** را بزنید و یک‌بار برنامه را ری‌استارت کنید.
 
 ---
 
-## حذف پلاگین (Uninstall)
+## حذف کامل پلاگین (Uninstall)
 
 </div>
 
@@ -82,62 +86,14 @@ github:w15800974-debug/deepseek-harness-locale-fa
 dsh plugin --profile web remove deepseek-harness-locale-fa
 ```
 
-<div dir="rtl">
-
-(برای نسخه دسکتاپ به‌جای `web` از `desktop` استفاده کنید و سپس برنامه را مجدداً راه‌اندازی نمایید.)
-
 ---
 
-## ساختار پروژه و توسعه
-
-</div>
-
-```text
-deepseek-harness-locale-fa/
-├── package.json            # DSH bundle + client manifest (dsh.bundle.patch & dsh.client)
-├── cordis.patch.yml        # Registers locale-fa in the active DSH profile
-├── index.js                # Minimal host-side Cordis entry
-├── locale/                 # Localized plugin metadata (en / fa) for Plugin Manager
-├── dict/fa/
-│   ├── core.json           # Official DSH namespace Persian dictionaries
-│   └── ui-phrases.json     # UI-chrome fallback phrase & pattern dictionary
-├── src/
-│   ├── rtl.css             # Persian RTL & strict LTR preservation stylesheet
-│   └── client-runtime.js   # Browser plugin runtime (locale API + Smart BiDi engine)
-├── lib/
-│   └── client.js           # Prebuilt __ModuleLoader__.load bundle (zero build step for users)
-└── scripts/
-    ├── build.mjs           # Compiles src/ + dict/ into lib/client.js
-    ├── check.mjs           # Validates manifest, dictionaries, and DSH bundle contract
-    └── test.mjs            # Automated runtime tests (registration, RTL/LTR, BiDi, cleanup)
-```
-
-<div dir="rtl">
-
-### دستورات ساخت و تست برای توسعه‌دهندگان
-
-</div>
+## توسعه و تست
 
 ```bash
-npm run build   # ساخت مجدد lib/client.js از روی منابع dict/ و src/
-npm run check   # بررسی ساختار مانیفست، دیکشنری‌ها و قرارداد __ModuleLoader__
-npm test        # اجرای تست‌های خودکار ثبت زبان، راست‌چین‌سازی، BiDi و پاک‌سازی
-```
-
----
-
-## English Summary
-
-`deepseek-harness-locale-fa` is a drop-in Persian (`فارسی`) language pack and smart RTL/BiDi layout plugin for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness).
-
-- Registers `fa` (`فارسی`, fallback `en`) via the official `@deepseek-ai/dsh-client-locale` API (`Settings → General → Language`).
-- Applies full RTL layout (`<html dir="rtl">`) and Persian typography (`Vazirmatn` + system fallbacks) across UI chrome and chat messages when `fa` is active.
-- Preserves strict LTR (`direction: ltr; unicode-bidi: isolate`) for code blocks, inline code, terminals, shell/command outputs, diffs, file paths, URLs, keyboard shortcuts, and purely English paragraphs.
-- Restores the original LTR layout and DOM cleanly when switching back to another language or uninstalling.
-
-**Install:**
-```bash
-dsh plugin --profile web add github:w15800974-debug/deepseek-harness-locale-fa
+npm run build   # ساخت lib/client.js از منابع dict/ و src/
+npm run check   # بررسی مانیفست، دیکشنری‌ها و قرارداد __ModuleLoader__
+npm test        # اجرای تست‌های خودکار
 ```
 
 ## License

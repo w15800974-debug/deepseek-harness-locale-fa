@@ -1,16 +1,25 @@
 /* ==========================================================================
- * deepseek-harness-locale-fa — Persian (فارسی) RTL & Smart BiDi Stylesheet
- * Scoped strictly to `html.dsh-locale-fa-rtl` so switching to another locale
- * restores the original LTR layout cleanly with zero residual styles.
+ * deepseek-harness-locale-fa v2.0 — Surgical Persian RTL & Smart BiDi CSS
+ *
+ * Design principles:
+ * 1. Scoped strictly to `html.dsh-locale-fa-rtl` so switching back to English
+ *    or Chinese restores the original layout with zero leftover rules.
+ * 2. NEVER override global `line-height` on body/buttons/inputs or overwrite
+ *    SVG `transform` (preserves DSH's pixel-accurate button & icon geometry).
+ * 3. NEVER use broad wildcard selectors like [class*="chat"] or [class*="terminal"]
+ *    that hijack layout frames, sidebars, or toolbar buttons.
+ * 4. Strictly isolate code, inline code, terminals, KaTeX, kbd, and technical
+ *    inputs in LTR (`unicode-bidi: isolate`).
  * ========================================================================== */
 
 html.dsh-locale-fa-rtl {
   direction: rtl;
   --dsh-fa-font-sans: 'Vazirmatn', 'Vazir', 'IRANSansX', 'IRANSans', 'Estedad', 'Dana', 'Segoe UI', 'Tahoma', system-ui, -apple-system, sans-serif;
   --dsh-fa-font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'SFMono-Regular', ui-monospace, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+  --dsw-font-sans: var(--dsh-fa-font-sans);
 }
 
-/* Base UI typography — crisp Persian readability */
+/* Clean Persian typography without breaking DSH's line-height tokens */
 html.dsh-locale-fa-rtl,
 html.dsh-locale-fa-rtl body,
 html.dsh-locale-fa-rtl button,
@@ -20,105 +29,62 @@ html.dsh-locale-fa-rtl select {
   font-family: var(--dsh-fa-font-sans);
 }
 
-html.dsh-locale-fa-rtl body {
-  direction: rtl;
-  text-align: right;
-  line-height: 1.65;
-  font-feature-settings: "ss01" 0;
+/* Protect native macOS / Windows desktop titlebar window controls from flipping */
+html.dsh-locale-fa-rtl [data-window-drag-controls] {
+  direction: ltr;
 }
 
 /* ==========================================================================
- * 1. Chat Messages & Composer — RTL by default, smart per-block BiDi
+ * 1. Smart Per-Block BiDi inside Chat Messages & Composer
  * ========================================================================== */
 
-html.dsh-locale-fa-rtl [class*="message"],
-html.dsh-locale-fa-rtl [class*="Message"],
-html.dsh-locale-fa-rtl [class*="markdown"],
-html.dsh-locale-fa-rtl [class*="Markdown"],
-html.dsh-locale-fa-rtl [class*="prose"],
-html.dsh-locale-fa-rtl [class*="Prose"],
-html.dsh-locale-fa-rtl [class*="chat"],
-html.dsh-locale-fa-rtl [class*="Chat"],
-html.dsh-locale-fa-rtl [class*="conversation"],
-html.dsh-locale-fa-rtl [class*="Conversation"],
-html.dsh-locale-fa-rtl [class*="reasoning"],
-html.dsh-locale-fa-rtl [class*="Reasoning"],
-html.dsh-locale-fa-rtl [class*="thinking"],
-html.dsh-locale-fa-rtl [class*="Thinking"] {
-  direction: rtl;
-  text-align: start;
-}
-
-/* Persian prose rhythm inside chat messages */
-html.dsh-locale-fa-rtl [class*="markdown"] p,
-html.dsh-locale-fa-rtl [class*="Markdown"] p,
-html.dsh-locale-fa-rtl [class*="prose"] p,
-html.dsh-locale-fa-rtl [class*="markdown"] li,
-html.dsh-locale-fa-rtl [class*="Markdown"] li,
-html.dsh-locale-fa-rtl [class*="prose"] li {
-  line-height: 1.8;
-}
-
-/* Lists & blockquotes in RTL messages */
-html.dsh-locale-fa-rtl [class*="markdown"] ul,
-html.dsh-locale-fa-rtl [class*="markdown"] ol,
-html.dsh-locale-fa-rtl [class*="Markdown"] ul,
-html.dsh-locale-fa-rtl [class*="Markdown"] ol,
-html.dsh-locale-fa-rtl [class*="prose"] ul,
-html.dsh-locale-fa-rtl [class*="prose"] ol {
-  padding-inline-start: 1.5em;
-  padding-inline-end: 0;
-}
-
-html.dsh-locale-fa-rtl [class*="markdown"] blockquote,
-html.dsh-locale-fa-rtl [class*="Markdown"] blockquote,
-html.dsh-locale-fa-rtl [class*="prose"] blockquote {
-  border-inline-start: 3px solid currentColor;
-  border-left: none;
-  padding-inline-start: 1em;
-  padding-inline-end: 0;
-  margin-inline: 0;
-}
-
-/* Tables inside messages */
-html.dsh-locale-fa-rtl table {
-  direction: rtl;
-}
-
-html.dsh-locale-fa-rtl th,
-html.dsh-locale-fa-rtl td {
-  text-align: start;
-}
-
-/* Composer & textareas: auto direction with RTL default when empty */
+/* Composer & editable inputs: auto direction (Persian -> RTL, English/commands -> LTR) */
 html.dsh-locale-fa-rtl textarea,
 html.dsh-locale-fa-rtl [contenteditable="true"] {
-  direction: rtl;
+  unicode-bidi: plaintext;
   text-align: start;
+}
+
+/* Explicit RTL blocks marked by Smart BiDi observer */
+html.dsh-locale-fa-rtl [data-dsh-bidi="rtl"] {
+  direction: rtl;
+  text-align: right;
   unicode-bidi: plaintext;
 }
 
-/* Smart per-block BiDi overrides applied by the BiDi observer */
-html.dsh-locale-fa-rtl [data-dsh-bidi="rtl"] {
-  direction: rtl !important;
-  text-align: right !important;
-  unicode-bidi: plaintext !important;
+html.dsh-locale-fa-rtl p[data-dsh-bidi="rtl"],
+html.dsh-locale-fa-rtl li[data-dsh-bidi="rtl"] {
+  line-height: 1.75;
 }
 
+/* Explicit LTR blocks (purely English paragraphs, English logs, etc.) */
 html.dsh-locale-fa-rtl [data-dsh-bidi="ltr"] {
-  direction: ltr !important;
-  text-align: left !important;
-  unicode-bidi: plaintext !important;
+  direction: ltr;
+  text-align: left;
+  unicode-bidi: plaintext;
+}
+
+/* Clean list indentation & blockquote border for RTL markdown blocks */
+html.dsh-locale-fa-rtl ul[data-dsh-bidi="rtl"],
+html.dsh-locale-fa-rtl ol[data-dsh-bidi="rtl"] {
+  padding-inline-start: 1.5em;
+  padding-inline-end: 0;
+  padding-left: 0;
+}
+
+html.dsh-locale-fa-rtl blockquote[data-dsh-bidi="rtl"] {
+  border-left: none;
+  border-inline-start: 3px solid var(--dsw-alias-border-default, rgba(128, 128, 128, 0.35));
+  padding-left: 0;
+  padding-inline-start: 1em;
 }
 
 /* ==========================================================================
- * 2. STRICT LTR PRESERVATION — Code, Commands, Terminals, Diffs, Paths, URLs
- *    These elements MUST NEVER flip to RTL!
+ * 2. STRICT LTR ISOLATION — Code, Commands, Terminals, Math, Shortcuts, URLs
  * ========================================================================== */
 
-/* Code blocks & syntax highlighters */
+/* Fenced code blocks & syntax highlighters */
 html.dsh-locale-fa-rtl pre,
-html.dsh-locale-fa-rtl pre code,
 html.dsh-locale-fa-rtl pre *,
 html.dsh-locale-fa-rtl .hljs,
 html.dsh-locale-fa-rtl .shiki,
@@ -126,93 +92,43 @@ html.dsh-locale-fa-rtl .prism-code,
 html.dsh-locale-fa-rtl .cm-editor,
 html.dsh-locale-fa-rtl .cm-content,
 html.dsh-locale-fa-rtl .monaco-editor,
-html.dsh-locale-fa-rtl [data-language],
-html.dsh-locale-fa-rtl [class*="codeBlock"],
-html.dsh-locale-fa-rtl [class*="code-block"],
-html.dsh-locale-fa-rtl [class*="CodeBlock"],
-html.dsh-locale-fa-rtl [class*="codeViewer"],
-html.dsh-locale-fa-rtl [class*="code-viewer"],
-html.dsh-locale-fa-rtl [class*="syntax"],
-html.dsh-locale-fa-rtl [class*="Syntax"] {
+html.dsh-locale-fa-rtl [data-language] {
   direction: ltr !important;
   text-align: left !important;
   unicode-bidi: isolate !important;
   font-family: var(--dsh-fa-font-mono) !important;
 }
 
-/* Inline code inside Persian prose — isolated LTR so punctuation never scrambles */
+/* Inline code inside Persian prose — stays LTR without breaking line wrap */
 html.dsh-locale-fa-rtl :not(pre) > code,
 html.dsh-locale-fa-rtl samp,
-html.dsh-locale-fa-rtl var {
-  direction: ltr !important;
-  unicode-bidi: isolate !important;
-  font-family: var(--dsh-fa-font-mono) !important;
-  font-size: 0.9em;
-}
-
-/* Keyboard shortcuts */
+html.dsh-locale-fa-rtl var,
 html.dsh-locale-fa-rtl kbd {
   direction: ltr !important;
   unicode-bidi: isolate !important;
   font-family: var(--dsh-fa-font-mono) !important;
 }
 
-/* Terminals, shell/bash/command execution, stdout/stderr, tool payloads & diffs */
+/* Real terminal canvases (xterm) & math formulas (KaTeX / MathJax) */
 html.dsh-locale-fa-rtl .xterm,
 html.dsh-locale-fa-rtl .xterm *,
-html.dsh-locale-fa-rtl [data-terminal],
-html.dsh-locale-fa-rtl [class*="terminal"],
-html.dsh-locale-fa-rtl [class*="Terminal"],
-html.dsh-locale-fa-rtl [class*="commandLine"],
-html.dsh-locale-fa-rtl [class*="command-line"],
-html.dsh-locale-fa-rtl [class*="commandOutput"],
-html.dsh-locale-fa-rtl [class*="command-output"],
-html.dsh-locale-fa-rtl [class*="CommandOutput"],
-html.dsh-locale-fa-rtl [class*="shellOutput"],
-html.dsh-locale-fa-rtl [class*="shell-output"],
-html.dsh-locale-fa-rtl [class*="bashCommand"],
-html.dsh-locale-fa-rtl [class*="bash-command"],
-html.dsh-locale-fa-rtl [class*="BashCommand"],
-html.dsh-locale-fa-rtl [class*="stdout"],
-html.dsh-locale-fa-rtl [class*="stderr"],
-html.dsh-locale-fa-rtl [class*="consoleOutput"],
-html.dsh-locale-fa-rtl [class*="console-output"],
-html.dsh-locale-fa-rtl [class*="diffViewer"],
-html.dsh-locale-fa-rtl [class*="diff-viewer"],
-html.dsh-locale-fa-rtl [class*="DiffViewer"],
-html.dsh-locale-fa-rtl [class*="diffLine"],
-html.dsh-locale-fa-rtl [class*="diff-line"],
-html.dsh-locale-fa-rtl [class*="patch"],
-html.dsh-locale-fa-rtl [class*="toolInput"],
-html.dsh-locale-fa-rtl [class*="tool-input"],
-html.dsh-locale-fa-rtl [class*="toolArgs"],
-html.dsh-locale-fa-rtl [class*="tool-args"],
-html.dsh-locale-fa-rtl [class*="jsonView"],
-html.dsh-locale-fa-rtl [class*="json-view"],
-html.dsh-locale-fa-rtl [class*="stackTrace"],
-html.dsh-locale-fa-rtl [class*="stack-trace"] {
+html.dsh-locale-fa-rtl [data-terminal="true"],
+html.dsh-locale-fa-rtl .katex,
+html.dsh-locale-fa-rtl .katex-display,
+html.dsh-locale-fa-rtl .MathJax {
   direction: ltr !important;
   text-align: left !important;
   unicode-bidi: isolate !important;
-  font-family: var(--dsh-fa-font-mono);
 }
 
-/* File paths, URLs, slash commands, model IDs & technical badges */
-html.dsh-locale-fa-rtl [class*="filePath"],
-html.dsh-locale-fa-rtl [class*="file-path"],
-html.dsh-locale-fa-rtl [class*="FilePath"],
-html.dsh-locale-fa-rtl [class*="pathText"],
-html.dsh-locale-fa-rtl [class*="path-text"],
-html.dsh-locale-fa-rtl [class*="urlText"],
-html.dsh-locale-fa-rtl [class*="slashCommand"],
-html.dsh-locale-fa-rtl [class*="slash-command"],
+/* Dynamically detected technical/command/stdout/diff/path blocks */
 html.dsh-locale-fa-rtl [data-dsh-ltr="true"] {
   direction: ltr !important;
   text-align: left !important;
   unicode-bidi: isolate !important;
 }
 
-/* Technical form inputs (URLs, API keys, endpoints, emails, paths, numbers) */
+/* Technical form inputs (API keys, URLs, endpoints, emails, paths, numbers) */
 html.dsh-locale-fa-rtl input[type="url"],
 html.dsh-locale-fa-rtl input[type="email"],
 html.dsh-locale-fa-rtl input[type="password"],
@@ -225,31 +141,8 @@ html.dsh-locale-fa-rtl input[name*="model" i],
 html.dsh-locale-fa-rtl input[name*="path" i],
 html.dsh-locale-fa-rtl input[name*="command" i],
 html.dsh-locale-fa-rtl input[placeholder*="http" i],
-html.dsh-locale-fa-rtl input[placeholder*="sk-" i],
-html.dsh-locale-fa-rtl input[placeholder*="/"] {
+html.dsh-locale-fa-rtl input[placeholder*="sk-" i] {
   direction: ltr !important;
   text-align: left !important;
   unicode-bidi: plaintext !important;
-}
-
-/* ==========================================================================
- * 3. UI Chrome Polish — Settings, Dialogs, Menus, Sidebars
- * ========================================================================== */
-
-html.dsh-locale-fa-rtl [role="dialog"],
-html.dsh-locale-fa-rtl [role="menu"],
-html.dsh-locale-fa-rtl [role="listbox"],
-html.dsh-locale-fa-rtl [role="tooltip"],
-html.dsh-locale-fa-rtl nav,
-html.dsh-locale-fa-rtl aside,
-html.dsh-locale-fa-rtl header {
-  direction: rtl;
-}
-
-/* Keep directional arrow/chevron icons clean without flipping non-directional icons */
-html.dsh-locale-fa-rtl [class*="chevron-right"] svg,
-html.dsh-locale-fa-rtl [class*="chevronRight"] svg,
-html.dsh-locale-fa-rtl [class*="arrow-right"] svg,
-html.dsh-locale-fa-rtl [class*="arrowRight"] svg {
-  transform: scaleX(-1);
 }

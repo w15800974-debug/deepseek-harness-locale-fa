@@ -1,10 +1,13 @@
 /**
- * Browser runtime template for deepseek-harness-locale-fa.
+ * Browser runtime template for deepseek-harness-locale-fa v2.0.
  *
- * scripts/build.mjs compiles this file together with dict/fa/core.json,
- * dict/fa/ui-phrases.json, and src/rtl.css into a single top-level
- * window.__ModuleLoader__.load({ id: 'deepseek-harness-locale-fa', factory })
- * bundle at lib/client.js.
+ * Three-layer architecture:
+ * 1. Official DSH Locale API (`ctx.locale.addLanguage` + `ctx.locale.register`)
+ *    with real dotted namespace keys.
+ * 2. Reversible runtime `ctx.locale.bind` / `resolveText` bridge so any UI string
+ *    falling back to English through `t()` is translated to Persian BEFORE React renders.
+ * 3. Surgical RTL + Smart BiDi DOM engine that keeps code, commands, terminals,
+ *    diffs, file paths, and purely English blocks strictly LTR without breaking layout.
  */
 
 /* global __CORE_DICTS__, __UI_PHRASES__, __RTL_CSS__ */
@@ -18,7 +21,7 @@ const HTML_RTL_CLASS = 'dsh-locale-fa-rtl'
 const PERSIAN_ARABIC_RE = /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/
 const LATIN_RE = /[A-Za-z]/
 const TECHNICAL_TEXT_RE =
-  /^(?:https?:\/\/|\/[\w./-]+|[A-Za-z]:\\|git\s|npm\s|pnpm\s|yarn\s|npx\s|node\s|python3?\s|pip\s|docker\s|dsh\s|cd\s|ls\s|cat\s|grep\s|curl\s|sudo\s|\$\s|--?[a-z0-9-]+|\{[^{}]*\}|\[[^[\]]*\])$/i
+  /^(?:https?:\/\/|\/[\w./-]+|[A-Za-z]:\\|git\s|npm\s|pnpm\s|yarn\s|npx\s|node\s|python3?\s|pip\s|docker\s|dsh\s|cd\s|ls\s|cat\s|grep\s|curl\s|sudo\s|\$\s|>\s|--?[a-z0-9-]+|@@\s|\{[^{}]*\}|\[[^[\]]*\]|Error:|TypeError:|SyntaxError:|ReferenceError:|at\s+\S+\s*\()/i
 
 const STRICT_LTR_SELECTOR = [
   'pre',
@@ -36,35 +39,11 @@ const STRICT_LTR_SELECTOR = [
   '.cm-editor',
   '.monaco-editor',
   '.xterm',
+  '.katex',
+  '.MathJax',
   '[data-language]',
-  '[data-terminal]',
-  '[data-dsh-ltr="true"]',
-  '[class*="codeBlock"]',
-  '[class*="code-block"]',
-  '[class*="CodeBlock"]',
-  '[class*="terminal"]',
-  '[class*="Terminal"]',
-  '[class*="commandOutput"]',
-  '[class*="command-output"]',
-  '[class*="CommandOutput"]',
-  '[class*="shellOutput"]',
-  '[class*="shell-output"]',
-  '[class*="bashCommand"]',
-  '[class*="bash-command"]',
-  '[class*="stdout"]',
-  '[class*="stderr"]',
-  '[class*="diffViewer"]',
-  '[class*="diff-viewer"]',
-  '[class*="DiffViewer"]',
-  '[class*="toolArgs"]',
-  '[class*="tool-args"]',
-  '[class*="toolInput"]',
-  '[class*="tool-input"]',
-  '[class*="filePath"]',
-  '[class*="file-path"]',
-  '[class*="FilePath"]',
-  '[class*="stackTrace"]',
-  '[class*="stack-trace"]',
+  '[data-terminal="true"]',
+  '[data-window-drag-controls]',
 ].join(',')
 
 const CHAT_CONTENT_SELECTOR = [
@@ -77,20 +56,37 @@ const CHAT_CONTENT_SELECTOR = [
   '[class*="MessageContent"]',
   '[class*="messageBody"]',
   '[class*="message-body"]',
-  '[class*="chatMessage"]',
-  '[class*="chat-message"]',
   '[data-message-id]',
-  '[data-testid*="message"]',
 ].join(',')
 
-const BIDI_BLOCK_SELECTOR = 'p, li, h1, h2, h3, h4, h5, h6, blockquote, td, th, figcaption, summary'
+const BIDI_BLOCK_SELECTOR = 'p, li, ul, ol, h1, h2, h3, h4, h5, h6, blockquote, td, th, figcaption, summary'
 
 const COMPILED_PATTERNS = (__UI_PHRASES__.patterns || []).map((entry) => ({
-  regex: new RegExp(entry.pattern),
+  regex: new RegExp(entry.pattern, 'i'),
   replace: entry.replace,
 }))
 
 const EXACT_PHRASES = __UI_PHRASES__.exact || {}
+const NORMALIZED_PHRASES = Object.create(null)
+
+function normalizeKey(str) {
+  return str
+    .trim()
+    .replace(/\u2026/g, '...')
+    .replace(/\s+/g, ' ')
+    .toLowerCase()
+}
+
+;(function buildNormalizedIndex() {
+  const keys = Object.keys(EXACT_PHRASES)
+  for (let i = 0; i < keys.length; i += 1) {
+    const k = keys[i]
+    const norm = normalizeKey(k)
+    if (!(norm in NORMALIZED_PHRASES)) {
+      NORMALIZED_PHRASES[norm] = EXACT_PHRASES[k]
+    }
+  }
+})()
 
 function isPersianLocale(locale) {
   if (typeof locale !== 'string') return false
@@ -102,6 +98,10 @@ function readActiveLocale(ctx) {
   try {
     const loc = ctx && ctx.locale
     if (loc) {
+      if (typeof loc.getLocale === 'function') {
+        const cur = loc.getLocale()
+        if (typeof cur === 'string' && cur) return cur
+      }
       if (typeof loc.getSnapshot === 'function') {
         const snap = loc.getSnapshot()
         if (snap && typeof snap.locale === 'string') return snap.locale
@@ -124,25 +124,39 @@ function readActiveLocale(ctx) {
 function translateUiText(rawText) {
   if (typeof rawText !== 'string') return null
   const trimmed = rawText.trim()
-  if (!trimmed || trimmed.length > 140) return null
+  if (!trimmed || trimmed.length > 260) return null
   if (PERSIAN_ARABIC_RE.test(trimmed)) return null
   if (TECHNICAL_TEXT_RE.test(trimmed)) return null
 
+  const startIdx = rawText.indexOf(trimmed)
+  const leading = rawText.slice(0, startIdx)
+  const trailing = rawText.slice(startIdx + trimmed.length)
+
+  // 1. Exact match
   if (Object.prototype.hasOwnProperty.call(EXACT_PHRASES, trimmed)) {
     const translated = EXACT_PHRASES[trimmed]
-    if (translated === trimmed) return null
-    const leading = rawText.slice(0, rawText.indexOf(trimmed))
-    const trailing = rawText.slice(rawText.indexOf(trimmed) + trimmed.length)
-    return leading + translated + trailing
+    if (translated && translated !== trimmed) {
+      return leading + translated + trailing
+    }
   }
 
+  // 2. Normalized case/ellipsis/colon match
+  const hasTrailingColon = trimmed.endsWith(':')
+  const core = hasTrailingColon ? trimmed.slice(0, -1).trim() : trimmed
+  const norm = normalizeKey(core)
+  if (norm in NORMALIZED_PHRASES) {
+    const translated = NORMALIZED_PHRASES[norm]
+    if (translated && translated !== core) {
+      return leading + translated + (hasTrailingColon ? ':' : '') + trailing
+    }
+  }
+
+  // 3. Parameterized pattern match
   for (let i = 0; i < COMPILED_PATTERNS.length; i += 1) {
     const rule = COMPILED_PATTERNS[i]
     if (rule.regex.test(trimmed)) {
       const translated = trimmed.replace(rule.regex, rule.replace)
       if (translated !== trimmed) {
-        const leading = rawText.slice(0, rawText.indexOf(trimmed))
-        const trailing = rawText.slice(rawText.indexOf(trimmed) + trimmed.length)
         return leading + translated + trailing
       }
     }
@@ -167,6 +181,23 @@ function isInsideSelector(node, selector) {
   return Boolean(el.closest(selector))
 }
 
+function isMonospaceElement(el) {
+  if (!el || el.nodeType !== 1 || typeof getComputedStyle !== 'function') return false
+  try {
+    const ff = (getComputedStyle(el).fontFamily || '').toLowerCase()
+    return (
+      ff.includes('mono') ||
+      ff.includes('consolas') ||
+      ff.includes('menlo') ||
+      ff.includes('fira code') ||
+      ff.includes('jetbrains') ||
+      ff.includes('courier')
+    )
+  } catch (_) {
+    return false
+  }
+}
+
 function createPersianDomController() {
   let active = false
   let previousDir = null
@@ -179,6 +210,8 @@ function createPersianDomController() {
   const originalAttrs = new WeakMap()
   const trackedAttrEls = new Set()
   const trackedBidiEls = new Set()
+  const trackedLtrEls = new Set()
+  const trackedAutoDirEls = new Set()
 
   function ensureStyles() {
     if (typeof document === 'undefined' || !document.head) return
@@ -255,31 +288,40 @@ function createPersianDomController() {
     textNode.nodeValue = translated
   }
 
+  function markAutoDirEditors(root) {
+    if (!root || typeof root.querySelectorAll !== 'function') return
+    const editors = root.querySelectorAll('textarea, [contenteditable="true"]')
+    for (let i = 0; i < editors.length; i += 1) {
+      const ed = editors[i]
+      if (isInsideSelector(ed, STRICT_LTR_SELECTOR)) continue
+      if (ed.getAttribute('dir') !== 'auto') {
+        ed.setAttribute('dir', 'auto')
+        trackedAutoDirEls.add(ed)
+      }
+    }
+  }
+
   function applySmartBidi(root) {
     if (!root || typeof root.querySelectorAll !== 'function') return
-    const containers = []
-    if (root.nodeType === 1 && typeof root.matches === 'function' && root.matches(CHAT_CONTENT_SELECTOR)) {
-      containers.push(root)
-    }
-    const found = root.querySelectorAll(CHAT_CONTENT_SELECTOR)
-    for (let i = 0; i < found.length; i += 1) {
-      containers.push(found[i])
-    }
 
-    for (let c = 0; c < containers.length; c += 1) {
-      const container = containers[c]
-      if (isInsideSelector(container, STRICT_LTR_SELECTOR)) continue
-      const blocks = container.querySelectorAll(BIDI_BLOCK_SELECTOR)
-      for (let b = 0; b < blocks.length; b += 1) {
-        const block = blocks[b]
-        if (isInsideSelector(block, STRICT_LTR_SELECTOR)) continue
-        const dir = classifyBlockDirection(block.textContent || '')
-        if (dir) {
-          if (block.getAttribute('data-dsh-bidi') !== dir) {
-            block.setAttribute('data-dsh-bidi', dir)
-            trackedBidiEls.add(block)
-          }
+    const blocks = root.querySelectorAll(BIDI_BLOCK_SELECTOR)
+    for (let b = 0; b < blocks.length; b += 1) {
+      const block = blocks[b]
+      if (isInsideSelector(block, STRICT_LTR_SELECTOR)) continue
+
+      const text = block.textContent || ''
+      if (isMonospaceElement(block) || TECHNICAL_TEXT_RE.test(text.trim())) {
+        if (block.getAttribute('data-dsh-ltr') !== 'true') {
+          block.setAttribute('data-dsh-ltr', 'true')
+          trackedLtrEls.add(block)
         }
+        continue
+      }
+
+      const dir = classifyBlockDirection(text)
+      if (dir && block.getAttribute('data-dsh-bidi') !== dir) {
+        block.setAttribute('data-dsh-bidi', dir)
+        trackedBidiEls.add(block)
       }
     }
   }
@@ -311,6 +353,7 @@ function createPersianDomController() {
       }
     }
 
+    markAutoDirEditors(root)
     applySmartBidi(root)
   }
 
@@ -371,11 +414,23 @@ function createPersianDomController() {
     trackedBidiEls.forEach((el) => {
       try {
         el.removeAttribute('data-dsh-bidi')
-      } catch (_) {
-        // Detached element
-      }
+      } catch (_) {}
     })
     trackedBidiEls.clear()
+
+    trackedLtrEls.forEach((el) => {
+      try {
+        el.removeAttribute('data-dsh-ltr')
+      } catch (_) {}
+    })
+    trackedLtrEls.clear()
+
+    trackedAutoDirEls.forEach((el) => {
+      try {
+        el.removeAttribute('dir')
+      } catch (_) {}
+    })
+    trackedAutoDirEls.clear()
   }
 
   function activate() {
@@ -467,7 +522,7 @@ function apply(ctx) {
     'deepseek-harness-locale-fa: language',
   )
 
-  // 2. Register official Persian dictionaries for all namespaces
+  // 2. Register official Persian dictionaries for verified DSH namespaces
   const namespaces = Object.keys(__CORE_DICTS__)
   for (let i = 0; i < namespaces.length; i += 1) {
     const ns = namespaces[i]
@@ -478,7 +533,69 @@ function apply(ctx) {
     )
   }
 
-  // 3. Manage dynamic RTL layout, smart BiDi messages, LTR code preservation & UI fallback
+  // 3. Reversible runtime bridge on ctx.locale.bind & resolveText for zero-flicker
+  //    Persian fallback on any namespace key not yet in core.json
+  ctx.effect(() => {
+    const loc = ctx && ctx.locale
+    if (!loc) return
+
+    const origBind = typeof loc.bind === 'function' ? loc.bind : null
+    const origResolveText = typeof loc.resolveText === 'function' ? loc.resolveText : null
+    const wrappedCache = new Map()
+
+    if (origBind) {
+      try {
+        loc.bind = function patchedBind(ns) {
+          if (wrappedCache.has(ns)) return wrappedCache.get(ns)
+          const rawT = origBind.call(this, ns)
+          if (typeof rawT !== 'function') return rawT
+          const wrappedT = function translatedT(key, params) {
+            const result = rawT(key, params)
+            if (typeof result === 'string' && isPersianLocale(readActiveLocale(ctx))) {
+              const fa = translateUiText(result)
+              if (fa) return fa
+            }
+            return result
+          }
+          wrappedCache.set(ns, wrappedT)
+          return wrappedT
+        }
+      } catch (_) {
+        // Read-only locale object: fall back to DOM UI-chrome layer
+      }
+    }
+
+    if (origResolveText) {
+      try {
+        loc.resolveText = function patchedResolveText(text) {
+          const result = origResolveText.call(this, text)
+          if (typeof result === 'string' && isPersianLocale(readActiveLocale(ctx))) {
+            const fa = translateUiText(result)
+            if (fa) return fa
+          }
+          return result
+        }
+      } catch (_) {
+        // Ignore if non-writable
+      }
+    }
+
+    return () => {
+      wrappedCache.clear()
+      if (origBind) {
+        try {
+          loc.bind = origBind
+        } catch (_) {}
+      }
+      if (origResolveText) {
+        try {
+          loc.resolveText = origResolveText
+        } catch (_) {}
+      }
+    }
+  }, 'deepseek-harness-locale-fa: runtime-locale-bridge')
+
+  // 4. Surgical RTL + Smart BiDi + DOM UI-chrome fallback controller
   const controller = createPersianDomController()
 
   ctx.effect(() => {
@@ -491,7 +608,6 @@ function apply(ctx) {
 
     const disposers = []
 
-    // Listen to Cordis locale/change event
     if (typeof ctx.on === 'function') {
       const off = ctx.on('locale/change', (payload) => {
         if (typeof payload === 'string') {
@@ -505,13 +621,11 @@ function apply(ctx) {
       if (typeof off === 'function') disposers.push(off)
     }
 
-    // Also subscribe to LocaleFace store if exposed
     if (ctx.locale && typeof ctx.locale.subscribe === 'function') {
       const unsub = ctx.locale.subscribe(() => syncNow())
       if (typeof unsub === 'function') disposers.push(unsub)
     }
 
-    // Belt-and-suspenders: watch <html lang="..."> changes written by dsh-client-locale
     let langObserver = null
     if (typeof MutationObserver === 'function' && typeof document !== 'undefined' && document.documentElement) {
       langObserver = new MutationObserver(() => {
@@ -528,9 +642,7 @@ function apply(ctx) {
       for (let i = 0; i < disposers.length; i += 1) {
         try {
           disposers[i]()
-        } catch (_) {
-          // Ignore teardown errors
-        }
+        } catch (_) {}
       }
       controller.deactivate()
     }

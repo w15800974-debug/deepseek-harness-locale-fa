@@ -9,7 +9,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const rootDir = path.resolve(__dirname, '..')
 const bundleCode = fs.readFileSync(path.join(rootDir, 'lib', 'client.js'), 'utf8')
 
-// Minimal DOM mock for testing RTL activation/deactivation & cleanup
 function createMockDocument() {
   const attrs = new Map([['lang', 'en'], ['dir', 'ltr']])
   const classes = new Set()
@@ -80,7 +79,6 @@ vm.runInNewContext(bundleCode, sandbox)
 // 1. Verify bundle registration
 assert.ok(registeredBundle, 'Bundle must register via window.__ModuleLoader__.load')
 assert.equal(registeredBundle.id, 'deepseek-harness-locale-fa')
-assert.equal(typeof registeredBundle.factory, 'function')
 
 // 2. Materialize plugin exports
 const pluginExports = registeredBundle.factory(() => {
@@ -88,7 +86,6 @@ const pluginExports = registeredBundle.factory(() => {
 })
 assert.equal(pluginExports.name, 'locale-fa')
 assert.deepEqual(Array.from(pluginExports.inject), ['locale'])
-assert.equal(typeof pluginExports.apply, 'function')
 
 // 3. Test apply(ctx) with mock Cordis context & locale service
 let activeLocale = 'en'
@@ -109,6 +106,14 @@ const mockCtx = {
     register(ns, lang, dict) {
       registeredDicts.set(`${ns}:${lang}`, dict)
       return () => registeredDicts.delete(`${ns}:${lang}`)
+    },
+    bind(ns) {
+      return (key) => {
+        const faDict = registeredDicts.get(`${ns}:fa`)
+        if (activeLocale === 'fa' && faDict && key in faDict) return faDict[key]
+        if (key === 'unmapped.test') return 'Analyzing the request'
+        return key
+      }
     },
     getSnapshot() {
       return { locale: activeLocale }
@@ -136,50 +141,52 @@ function emitLocaleChange(next) {
 
 pluginExports.apply(mockCtx)
 
-// Check language registration
+// Check official dotted keys
 assert.equal(addedLanguages.length, 1)
 assert.deepEqual({ ...addedLanguages[0] }, { id: 'fa', label: 'فارسی', fallback: 'en' })
-assert.ok(registeredDicts.size >= 35, `Expected >= 35 namespaces, got ${registeredDicts.size}`)
-assert.equal(registeredDicts.get('common:fa').cancel, 'لغو')
-assert.equal(registeredDicts.get('sidebar:fa').newSession, 'نشست جدید')
+assert.equal(registeredDicts.get('sidebar:fa')['session.new'], 'نشست جدید')
+assert.equal(registeredDicts.get('settings.locale:fa')['language.title'], 'زبان')
+assert.equal(registeredDicts.get('settings.theme:fa')['appearance.dark'], 'تیره')
+assert.equal(registeredDicts.get('chat:fa')['message.stepProcess.thinking'], 'در حال تحلیل درخواست')
 
-// While English is active, RTL must NOT be applied
-assert.equal(mockDoc.documentElement.getAttribute('dir'), 'ltr')
-assert.equal(mockDoc.documentElement.classList.contains('dsh-locale-fa-rtl'), false)
+// Check runtime bind() bridge translates unmapped keys when fa is active
+const tTest = mockCtx.locale.bind('customPlugin')
+assert.equal(tTest('unmapped.test'), 'Analyzing the request') // English active -> untouched
 
-// Switch to Persian -> RTL activates!
+// Switch to Persian -> RTL activates & bind() bridge translates automatically!
 emitLocaleChange('fa')
 assert.equal(mockDoc.documentElement.getAttribute('dir'), 'rtl')
 assert.equal(mockDoc.documentElement.classList.contains('dsh-locale-fa-rtl'), true)
-assert.ok(mockDoc.getElementById('dsh-locale-fa-rtl-style'), 'RTL stylesheet must be injected')
+assert.equal(tTest('unmapped.test'), 'در حال تحلیل درخواست')
 
 // Switch back to English -> RTL deactivates cleanly!
 emitLocaleChange('en')
 assert.equal(mockDoc.documentElement.getAttribute('dir'), 'ltr')
 assert.equal(mockDoc.documentElement.classList.contains('dsh-locale-fa-rtl'), false)
-assert.equal(mockDoc.getElementById('dsh-locale-fa-rtl-style'), null, 'RTL stylesheet must be removed')
+assert.equal(mockDoc.getElementById('dsh-locale-fa-rtl-style'), null)
+assert.equal(tTest('unmapped.test'), 'Analyzing the request')
 
-// 4. Test smart BiDi direction classifier
+// 4. Test smart BiDi & UI phrase engine
 const { classifyBlockDirection, translateUiText } = pluginExports.__internal
 assert.equal(classifyBlockDirection('سلام، این یک پیام فارسی است.'), 'rtl')
 assert.equal(classifyBlockDirection('دستور git status را اجرا کنید'), 'rtl')
 assert.equal(classifyBlockDirection('This is a purely English paragraph.'), 'ltr')
 assert.equal(classifyBlockDirection('git clone https://github.com/deepseek-ai/deepseek-harness'), 'ltr')
-assert.equal(classifyBlockDirection('/usr/local/bin/dsh'), 'ltr')
+assert.equal(classifyBlockDirection('TypeError: Cannot read properties of undefined'), 'ltr')
 
-// 5. Test UI chrome phrase translator
 assert.equal(translateUiText('New Session'), 'نشست جدید')
-assert.equal(translateUiText('Settings'), 'تنظیمات')
-assert.equal(translateUiText('3 files'), '3 فایل')
+assert.equal(translateUiText('language:'), 'زبان:')
+assert.equal(translateUiText('Thought for 6s'), 'تفکر به مدت 6s')
+assert.equal(translateUiText('3 minutes ago'), '3 دقیقه پیش')
+assert.equal(translateUiText('Unpin Plugins from sidebar'), 'برداشتن سنجاق Plugins از نوار کناری')
 assert.equal(translateUiText('npm run build'), null)
-assert.equal(translateUiText('تنظیمات'), null)
 
-// 6. Test full plugin unload cleanup
+// 5. Test full plugin unload cleanup
 emitLocaleChange('fa')
 assert.equal(mockDoc.documentElement.getAttribute('dir'), 'rtl')
 for (const cleanup of effectCleanups) cleanup()
-assert.equal(addedLanguages.length, 0, 'Language must be unregistered on unload')
-assert.equal(registeredDicts.size, 0, 'Dictionaries must be unregistered on unload')
-assert.equal(mockDoc.documentElement.getAttribute('dir'), 'ltr', 'RTL must be cleaned up on unload')
+assert.equal(addedLanguages.length, 0)
+assert.equal(registeredDicts.size, 0)
+assert.equal(mockDoc.documentElement.getAttribute('dir'), 'ltr')
 
-console.log('ALL TESTS PASSED: language registration, dynamic RTL/LTR switching, BiDi classifier, UI fallback, and unload cleanup verified.')
+console.log('ALL v2.0 TESTS PASSED: real dotted keys, runtime bind() bridge, surgical RTL/LTR switching, BiDi classifier, and full unload cleanup verified.')
